@@ -17,13 +17,23 @@ namespace CORE.IdentityServer
                     {
                         SubjectId = "1",
                         Username = "alice",
-                        Password = "password"
+                        Password = "password",
+                        Claims = new []
+                        {
+                            new Claim("name", "Alice"),
+                            new Claim("website", "https://alice.com")
+                        }
                     },
                     new TestUser
                     {
                         SubjectId = "2",
                         Username = "bob",
-                        Password = "password"
+                        Password = "password",
+                        Claims = new []
+                        {
+                            new Claim("name", "Bob"),
+                            new Claim("website", "https://bob.com")
+                        }
                     }
                 };
             }
@@ -35,6 +45,16 @@ namespace CORE.IdentityServer
                 new ApiResource("api1", "My API")
             };
         }
+
+        public static IEnumerable<IdentityResource> GetIdentityResources()
+        {
+            return new List<IdentityResource>
+            {
+                new IdentityResources.OpenId(),
+                new IdentityResources.Profile(),
+            };
+        }
+
         public static IEnumerable<Client> GetClients()
         {
             return new List<Client>
@@ -55,8 +75,68 @@ namespace CORE.IdentityServer
 
                     // scopes that client has access to
                     AllowedScopes = { "api1" }
+                },
+                new Client
+                {
+                    ClientId = "mvc",
+                    ClientName = "MVC Client",
+                    AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
+                    ClientSecrets =
+                    {
+                        new Secret("secret".Sha256())
+                    },
+                    RedirectUris           = { "http://localhost:5002/signin-oidc" },
+                    PostLogoutRedirectUris = { "http://localhost:5002/signout-callback-oidc" },
+                    AllowedScopes =
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile,
+                        "api1"
+                    },
+                    AllowOfflineAccess = true
+                },
+                // JavaScript Client
+                new Client
+                {
+                    ClientId = "js",
+                    ClientName = "JavaScript Client",
+                    AllowedGrantTypes = GrantTypes.Implicit,
+                    AllowAccessTokensViaBrowser = true,
+
+                    RedirectUris =           { "http://localhost:5003/callback.html" },
+                    PostLogoutRedirectUris = { "http://localhost:5003/index.html" },
+                    AllowedCorsOrigins =     { "http://localhost:5003" },
+
+                    AllowedScopes =
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile,
+                        "api1"
+                    }
                 }
             };
         }
+
+
+        // Sample Controller Method
+        // public async Task<IActionResult> IndexAsync()
+        // {
+        //     var disco = await DiscoveryClient.GetAsync("http://localhost:5000");
+        //     var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.client", "secret");
+        //     var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
+
+        //     if (tokenResponse.IsError)
+        //     {
+        //         return new JsonResult(tokenResponse.Error);
+        //     }
+
+        //     return new JsonResult(tokenResponse.Json);
+        // }
+
+        // public async Task Logout()
+        // {
+        //     await HttpContext.SignOutAsync("Cookies");
+        //     await HttpContext.SignOutAsync("oidc");
+        // }
     }
 }
