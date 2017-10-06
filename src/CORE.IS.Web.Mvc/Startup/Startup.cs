@@ -21,12 +21,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using App.Metrics.Reporting.Interfaces;
 using App.Metrics.Extensions.Reporting.ElasticSearch;
 using App.Metrics.Extensions.Reporting.ElasticSearch.Client;
+using App.Metrics.Filtering;
+using App.Metrics;
+using App.Metrics.Configuration;
+
 
 #if FEATURE_SIGNALR
 using Owin;
 using Abp.Owin;
 using CORE.IS.Owin;
-using App.Metrics.Extensions.Reporting.ElasticSearch;
 
 #endif
 
@@ -38,6 +41,10 @@ namespace CORE.IS.Web.Startup
 
         public Startup(IHostingEnvironment env)
         {
+            // var builder = new ConfigurationBuilder().SetBasePath(env.ContentRootPath).
+            //                 AddJsonFile("appsettings.json", optional: false, reloadOnChange: true).
+            //                 AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true).
+            //                 AddEnvironmentVariables();
             _appConfiguration = env.GetAppConfiguration();
         }
 
@@ -50,8 +57,36 @@ namespace CORE.IS.Web.Startup
                 options.AddMetricsResourceFilter();
             });
 
+            // var reportFilter = new DefaultMetricsFilter();
+            // reportFilter.WithHealthChecks(false);
+            
+            //  services.AddMetrics(_appConfiguration.GetSection("AppMetrics")).                 
+            //          AddJsonHealthSerialization().
+            //          // AddJsonMetricsTextSerialization().
+            //          AddElasticsearchMetricsTextSerialization(ElasticSearchIndex).
+            //          AddElasticsearchMetricsSerialization(ElasticSearchIndex).
+            //          AddReporting(
+            //              factory =>
+            //              {
+            //                  factory.AddElasticSearch(
+            //                      new ElasticSearchReporterSettings
+            //                      {                                    
+            //                          ElasticSearchSettings = new ElasticSearchSettings(ElasticSearchUri, ElasticSearchIndex)                                     
+            //                      },
+            //                      reportFilter);
+            //              }).
+            //          AddHealthChecks(
+            //              factory =>
+            //              {
+            //                  factory.RegisterPingHealthCheck("google ping", "google.com", TimeSpan.FromSeconds(10));
+            //                  factory.RegisterHttpGetHealthCheck("github", new Uri("https://github.com/"), TimeSpan.FromSeconds(10));
+            //              }).
+            //          AddMetricsMiddleware(_appConfiguration.GetSection("AspNetMetrics"));
+            
+            
+            
             services.AddMetrics()
-			// .AddJsonSerialization() - Enables json format on the /metrics-text, /metrics, /health and /env endpoints.
+		    .AddJsonSerialization() //- Enables json format on the /metrics-text, /metrics, /health and /env endpoints.
 			.AddJsonMetricsSerialization() // Enables json format on the /metrics-text endpoint.
 			.AddJsonMetricsTextSerialization() // Enables json format on the /metrics endpoint.
 			.AddJsonHealthSerialization() // Enables json format on the /health endpont.
@@ -71,8 +106,7 @@ namespace CORE.IS.Web.Startup
                     ElasticSearchSettings = new ElasticSearchSettings(new Uri("http://localhost:9200"), "metrics"),
                     ReportInterval = TimeSpan.FromSeconds(5)
                 });
-            })
-;
+            });
 
             IdentityRegistrar.Register(services);
 
@@ -99,10 +133,9 @@ namespace CORE.IS.Web.Startup
             });
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime lifetime)
         {
             app.UseAbp(); //Initializes ABP framework.
-            app.UseMetrics();
 
             if (env.IsDevelopment())
             {
@@ -124,8 +157,10 @@ namespace CORE.IS.Web.Startup
             //         AutomaticChallenge = true
             //     });
 
-            app.UseStaticFiles();
+            app.UseMetrics();
+            app.UseMetricsReporting(lifetime);
 
+            app.UseStaticFiles();
             app.UseAuthentication();
             app.UseJwtTokenMiddleware();
 
