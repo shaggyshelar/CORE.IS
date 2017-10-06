@@ -1,11 +1,15 @@
 ﻿using System;
 using Abp.AspNetCore;
 using Abp.Castle.Logging.Log4Net;
-using CORE.IS.Authentication.JwtBearer;
+using Abp.IdentityServer4;
 using CORE.IS.Configuration;
 using CORE.IS.Identity;
 using CORE.IS.Web.Resources;
+using CORE.IS.Authentication.JwtBearer;
+using IdentityServer4.AspNetIdentity;
 using Castle.Facilities.Logging;
+using CORE.IS.EntityFrameworkCore;
+using CORE.IS.Authorization.Users;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -41,6 +45,16 @@ namespace CORE.IS.Web.Startup
             });
 
             IdentityRegistrar.Register(services);
+
+            services.AddIdentityServer()
+                //.AddTemporarySigningCredential()
+                .AddDeveloperSigningCredential()
+                .AddInMemoryIdentityResources(IdentityServerConfig.GetIdentityResources())
+                .AddInMemoryApiResources(IdentityServerConfig.GetApiResources())
+                .AddInMemoryClients(IdentityServerConfig.GetClients())
+                .AddAbpPersistedGrants<ISDbContext>()
+                .AddAbpIdentityServer<User>();
+
             AuthConfigurer.Configure(services, _appConfiguration);
 
             services.AddScoped<IWebResourceManager, WebResourceManager>();
@@ -67,6 +81,17 @@ namespace CORE.IS.Web.Startup
             {
                 app.UseExceptionHandler("/Error");
             }
+
+            app.UseIdentityServer();
+
+            // app.UseIdentityServerAuthentication(
+            //     new IdentityServerAuthenticationOptions
+            //     {
+            //         Authority = "http://localhost:5000/",
+            //         RequireHttpsMetadata = false,
+            //         AutomaticAuthenticate = true,
+            //         AutomaticChallenge = true
+            //     });
 
             app.UseStaticFiles();
 

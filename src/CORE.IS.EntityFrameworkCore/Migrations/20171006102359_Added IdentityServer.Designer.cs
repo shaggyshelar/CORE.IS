@@ -15,9 +15,10 @@ using System;
 namespace CORE.IS.Migrations
 {
     [DbContext(typeof(ISDbContext))]
-    partial class ISDbContextModelSnapshot : ModelSnapshot
+    [Migration("20171006102359_Added IdentityServer")]
+    partial class AddedIdentityServer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
