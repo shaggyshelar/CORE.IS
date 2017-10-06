@@ -18,11 +18,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using App.Metrics.Reporting.Interfaces;
+using App.Metrics.Extensions.Reporting.ElasticSearch;
+using App.Metrics.Extensions.Reporting.ElasticSearch.Client;
 
 #if FEATURE_SIGNALR
 using Owin;
 using Abp.Owin;
 using CORE.IS.Owin;
+using App.Metrics.Extensions.Reporting.ElasticSearch;
+
 #endif
 
 namespace CORE.IS.Web.Startup
@@ -42,7 +47,32 @@ namespace CORE.IS.Web.Startup
             services.AddMvc(options =>
             {
                 options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+                options.AddMetricsResourceFilter();
             });
+
+            services.AddMetrics()
+			// .AddJsonSerialization() - Enables json format on the /metrics-text, /metrics, /health and /env endpoints.
+			.AddJsonMetricsSerialization() // Enables json format on the /metrics-text endpoint.
+			.AddJsonMetricsTextSerialization() // Enables json format on the /metrics endpoint.
+			.AddJsonHealthSerialization() // Enables json format on the /health endpont.
+			.AddJsonEnvironmentInfoSerialization() // Enables json format on the /env endpont.
+			.AddHealthChecks()
+			.AddMetricsMiddleware()
+            .AddReporting(factory =>
+            {
+                factory.AddElasticSearch(new ElasticSearchReporterSettings
+                {
+                    HttpPolicy = new HttpPolicy
+                    {
+                        FailuresBeforeBackoff = 3,
+                        BackoffPeriod = TimeSpan.FromSeconds(30),
+                        Timeout = TimeSpan.FromSeconds(3)
+                    },
+                    ElasticSearchSettings = new ElasticSearchSettings(new Uri("http://localhost:9200"), "metrics"),
+                    ReportInterval = TimeSpan.FromSeconds(5)
+                });
+            })
+;
 
             IdentityRegistrar.Register(services);
 
@@ -72,6 +102,7 @@ namespace CORE.IS.Web.Startup
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             app.UseAbp(); //Initializes ABP framework.
+            app.UseMetrics();
 
             if (env.IsDevelopment())
             {
