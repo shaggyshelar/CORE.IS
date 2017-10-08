@@ -50,13 +50,6 @@ namespace CORE.IS.Web.Startup
 
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
-            //MVC
-            services.AddMvc(options =>
-            {
-                options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
-                options.AddMetricsResourceFilter();
-            });
-
             // var reportFilter = new DefaultMetricsFilter();
             // reportFilter.WithHealthChecks(false);
             
@@ -106,6 +99,13 @@ namespace CORE.IS.Web.Startup
                     ElasticSearchSettings = new ElasticSearchSettings(new Uri("http://localhost:9200"), "metrics"),
                     ReportInterval = TimeSpan.FromSeconds(5)
                 });
+            });
+
+            //MVC
+            services.AddMvc(options =>
+            {
+                options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+                options.AddMetricsResourceFilter();
             });
 
             IdentityRegistrar.Register(services);
