@@ -1,4 +1,8 @@
 ﻿using System;
+using App.Metrics.Extensions.Reporting.InfluxDB;
+using App.Metrics.Extensions.Reporting.InfluxDB.Client;
+using App.Metrics.Filtering;
+using App.Metrics.Reporting.Interfaces;
 using Abp.AspNetCore;
 using Abp.Castle.Logging.Log4Net;
 using Abp.IdentityServer4;
@@ -38,6 +42,31 @@ namespace CORE.IS.Web.Startup
 
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
+            var database = "appmetricsdemo";
+            var uri = new Uri("http://127.0.0.1:8086");
+
+            services.AddMetrics(options => 
+            {
+                options.WithGlobalTags((globalTags, info) => 
+                { 
+                    globalTags.Add("app", info.EntryAssemblyName); 
+                    globalTags.Add("env", "stage");
+                });
+            })
+            .AddHealthChecks()
+            .AddJsonSerialization()
+            .AddReporting(
+                factory =>
+                {
+                    factory.AddInfluxDb(
+                    new InfluxDBReporterSettings
+                    {                  
+                        InfluxDbSettings = new InfluxDBSettings(database, uri),
+                        ReportInterval = TimeSpan.FromSeconds(5)
+                    });
+            })
+            .AddMetricsMiddleware(options => options.IgnoredHttpStatusCodes = new [] {404});
+
             //MVC
             services.AddMvc(options =>
             {
@@ -69,7 +98,7 @@ namespace CORE.IS.Web.Startup
             });
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime lifetime)
         {
             app.UseAbp(); //Initializes ABP framework.
 
@@ -102,6 +131,8 @@ namespace CORE.IS.Web.Startup
             //Integrate to OWIN
             app.UseAppBuilder(ConfigureOwinServices);
 #endif
+            app.UseMetrics();
+            app.UseMetricsReporting(lifetime);
 
             app.UseMvc(routes =>
             {
