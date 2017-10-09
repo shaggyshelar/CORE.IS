@@ -1,6 +1,7 @@
 ﻿using System;
 using App.Metrics.Extensions.Reporting.InfluxDB;
 using App.Metrics.Extensions.Reporting.InfluxDB.Client;
+using App.Metrics.Configuration;
 using App.Metrics.Filtering;
 using App.Metrics.Reporting.Interfaces;
 using Abp.AspNetCore;
@@ -43,14 +44,14 @@ namespace CORE.IS.Web.Startup
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
             var database = "appmetricsdemo";
-            var uri = new Uri("http://127.0.0.1:8086");
+            var uri = new Uri("http://localhost:8086");
 
             services.AddMetrics(options => 
             {
                 options.WithGlobalTags((globalTags, info) => 
                 { 
-                    globalTags.Add("app", info.EntryAssemblyName); 
-                    globalTags.Add("env", "stage");
+                    //globalTags.Add("app", info.EntryAssemblyName); 
+                    //globalTags.Add("env", "stage");
                 });
             })
             .AddHealthChecks()
