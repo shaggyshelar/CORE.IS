@@ -44,20 +44,13 @@ namespace CORE.IS.Web.Startup
 
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
-            var database = "appmetricsdemo";
+            var database = "appMetrics";
             var uri = new Uri("http://localhost:8086");
 
             var reportFilter = new DefaultMetricsFilter();
             reportFilter.WithHealthChecks(false);
 
-            services.AddMetrics(options =>
-            {
-                options.WithGlobalTags((globalTags, info) =>
-                {
-                    //globalTags.Add("app", info.EntryAssemblyName); 
-                    //globalTags.Add("env", "stage");
-                });
-            })
+            services.AddMetrics(_appConfiguration.GetSection("AppMetrics"))
             .AddHealthChecks(
                 factory =>
                     {
@@ -77,7 +70,8 @@ namespace CORE.IS.Web.Startup
                         },
                         reportFilter);
                 })
-            .AddMetricsMiddleware(options => options.IgnoredHttpStatusCodes = new[] { 404 });
+            //.AddMetricsMiddleware(options => options.IgnoredHttpStatusCodes = new[] { 404 });
+            .AddMetricsMiddleware(_appConfiguration.GetSection("AspNetMetrics"));
 
             //MVC
             services.AddMvc(options =>
