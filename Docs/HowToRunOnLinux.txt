@@ -1,0 +1,11 @@
+1. sudo influx
+2. sudo docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=espl@123' -p 1433:1433 -d microsoft/mssql-server-linux
+3. sudo service grafana-server start
+
+
+4. sqlcmd -S localhost -U SA -P 'espl@123'
+5. CREATE DATABASE ISDb
+6. GO
+7. cd ./src/CORE.IS.EntityFrameworkCore/
+8. dotnet ef database update
+9. SELECT * FROM databaseName.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
