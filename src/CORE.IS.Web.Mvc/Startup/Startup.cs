@@ -23,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using App.Metrics;
 
 #if FEATURE_SIGNALR
 using Owin;
@@ -46,32 +47,43 @@ namespace CORE.IS.Web.Startup
             var database = "appmetricsdemo";
             var uri = new Uri("http://localhost:8086");
 
-            services.AddMetrics(options => 
+            var reportFilter = new DefaultMetricsFilter();
+            reportFilter.WithHealthChecks(false);
+
+            services.AddMetrics(options =>
             {
-                options.WithGlobalTags((globalTags, info) => 
-                { 
+                options.WithGlobalTags((globalTags, info) =>
+                {
                     //globalTags.Add("app", info.EntryAssemblyName); 
                     //globalTags.Add("env", "stage");
                 });
             })
-            .AddHealthChecks()
+            .AddHealthChecks(
+                factory =>
+                    {
+                        factory.RegisterPingHealthCheck("google ping", "google.com", TimeSpan.FromSeconds(10));
+                        factory.RegisterHttpGetHealthCheck("github", new Uri("https://github.com/"), TimeSpan.FromSeconds(10));
+                    }
+            )
             .AddJsonSerialization()
             .AddReporting(
                 factory =>
                 {
                     factory.AddInfluxDb(
-                    new InfluxDBReporterSettings
-                    {                  
-                        InfluxDbSettings = new InfluxDBSettings(database, uri),
-                        ReportInterval = TimeSpan.FromSeconds(5)
-                    });
-            })
-            .AddMetricsMiddleware(options => options.IgnoredHttpStatusCodes = new [] {404});
+                        new InfluxDBReporterSettings
+                        {
+                            InfluxDbSettings = new InfluxDBSettings(database, uri),
+                            ReportInterval = TimeSpan.FromSeconds(5)
+                        },
+                        reportFilter);
+                })
+            .AddMetricsMiddleware(options => options.IgnoredHttpStatusCodes = new[] { 404 });
 
             //MVC
             services.AddMvc(options =>
             {
                 options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+                options.AddMetricsResourceFilter();
             });
 
             IdentityRegistrar.Register(services);
